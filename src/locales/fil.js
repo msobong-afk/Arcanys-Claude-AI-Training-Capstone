@@ -1,0 +1,18 @@
+module.exports = {
+  AUTH_MISSING_HEADER:      { error: 'Kinakailangan ang pagpapatunay',  message: 'Walang authorization header na ibinigay' },
+  AUTH_MALFORMED_HEADER:    { error: 'Kinakailangan ang pagpapatunay',  message: 'Ang authorization header ay dapat nasa format: Bearer <token>' },
+  AUTH_TOKEN_EXPIRED:       { error: 'Nag-expire na ang token',         message: 'Nag-expire na ang iyong session. Mangyaring mag-login muli.' },
+  AUTH_TOKEN_INVALID:       { error: 'Hindi wastong token',             message: 'Ang ibinigay na token ay hindi wasto' },
+  AUTH_VERIFICATION_FAILED: { error: 'Nabigo ang pagpapatunay',         message: 'Hindi ma-verify ang token' },
+  AUTH_DB_ERROR:            { error: 'Panloob na error ng server',      message: 'Hindi ma-verify ang user account' },
+  AUTH_USER_NOT_FOUND:      { error: 'Hindi nahanap ang user',          message: 'Ang account na nauugnay sa token na ito ay wala na' },
+  AUTH_ACCOUNT_INACTIVE:    { error: 'Hindi aktibo ang account',        message: 'Na-deactivate ang iyong account. Makipag-ugnayan sa support.' },
+  AUTH_RATE_LIMITED:        { error: 'Nalampasan ang rate limit',       message: 'Maximum na {{maxRequests}} request bawat minuto' },
+  AUTH_PERMISSION_DENIED:   { error: 'Hindi sapat ang mga pahintulot',  message: "Ang iyong role ({{role}}) ay walang pahintulot na '{{permission}}'" },
+  AUTH_UNEXPECTED_ERROR:    { error: 'Panloob na error ng server',      message: 'May hindi inaasahang error na nangyari habang nagpapatunay' },
+  REGISTER_MISSING_FIELDS:  { message: 'Nawawala ang mga kinakailangang field: email, password, name' },
+  REGISTER_EMAIL_TAKEN:     { message: 'Ang email ay nairehistro na' },
+  LOGIN_MISSING_FIELDS:     { message: 'Nawawala ang mga kinakailangang field: email, password' },
+  LOGIN_INVALID_CREDENTIALS:{ message: 'Hindi wastong email o password' },
+  LOGIN_ACCOUNT_INACTIVE:   { message: 'Hindi aktibo ang account' },
+};

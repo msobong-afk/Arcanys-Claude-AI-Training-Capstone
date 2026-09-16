@@ -1,0 +1,18 @@
+module.exports = {
+  AUTH_MISSING_HEADER:      { error: 'Authentication required',   message: 'No authorization header provided' },
+  AUTH_MALFORMED_HEADER:    { error: 'Authentication required',   message: 'Authorization header must be in format: Bearer <token>' },
+  AUTH_TOKEN_EXPIRED:       { error: 'Token expired',             message: 'Your session has expired. Please log in again.' },
+  AUTH_TOKEN_INVALID:       { error: 'Invalid token',             message: 'The provided token is not valid' },
+  AUTH_VERIFICATION_FAILED: { error: 'Authentication failed',     message: 'Unable to verify token' },
+  AUTH_DB_ERROR:            { error: 'Internal server error',     message: 'Unable to verify user account' },
+  AUTH_USER_NOT_FOUND:      { error: 'User not found',            message: 'The account associated with this token no longer exists' },
+  AUTH_ACCOUNT_INACTIVE:    { error: 'Account inactive',          message: 'Your account has been deactivated. Contact support.' },
+  AUTH_RATE_LIMITED:        { error: 'Rate limit exceeded',       message: 'Maximum {{maxRequests}} requests per minute' },
+  AUTH_PERMISSION_DENIED:   { error: 'Insufficient permissions',  message: "Your role ({{role}}) does not have the '{{permission}}' permission" },
+  AUTH_UNEXPECTED_ERROR:    { error: 'Internal server error',     message: 'An unexpected error occurred during authentication' },
+  REGISTER_MISSING_FIELDS:  { message: 'Missing required fields: email, password, name' },
+  REGISTER_EMAIL_TAKEN:     { message: 'Email already registered' },
+  LOGIN_MISSING_FIELDS:     { message: 'Missing required fields: email, password' },
+  LOGIN_INVALID_CREDENTIALS:{ message: 'Invalid email or password' },
+  LOGIN_ACCOUNT_INACTIVE:   { message: 'Account is inactive' },
+};
