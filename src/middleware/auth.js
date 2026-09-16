@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const db = require("../config/database");
 const logger = require("../utils/logger");
+const { t, detectLocale } = require("../utils/i18n");
 
 const SECRET = process.env.JWT_SECRET || "fallback-secret-do-not-use";
 
@@ -66,7 +67,9 @@ const RATE_LIMIT_MAX_REQUESTS = 100;
  */
 function authenticate(requiredPermission) {
   return async (req, res, next) => {
+    let locale = 'en';
     try {
+      locale = detectLocale(req);
       // ── Step 1: Extract token ──
       const authHeader = req.headers.authorization;
       if (!authHeader) {
@@ -76,8 +79,8 @@ function authenticate(requiredPermission) {
           method: req.method,
         });
         return res.status(401).json({
-          error: "Authentication required",
-          message: "No authorization header provided",
+          error: t("AUTH_MISSING_HEADER.error", locale),
+          message: t("AUTH_MISSING_HEADER.message", locale),
           code: "AUTH_MISSING_HEADER",
         });
       }
@@ -90,8 +93,8 @@ function authenticate(requiredPermission) {
           headerPrefix: authHeader.substring(0, 20),
         });
         return res.status(401).json({
-          error: "Authentication required",
-          message: "Authorization header must be in format: Bearer <token>",
+          error: t("AUTH_MALFORMED_HEADER.error", locale),
+          message: t("AUTH_MALFORMED_HEADER.message", locale),
           code: "AUTH_MALFORMED_HEADER",
         });
       }
@@ -109,8 +112,8 @@ function authenticate(requiredPermission) {
             expiredAt: jwtError.expiredAt,
           });
           return res.status(401).json({
-            error: "Token expired",
-            message: "Your session has expired. Please log in again.",
+            error: t("AUTH_TOKEN_EXPIRED.error", locale),
+            message: t("AUTH_TOKEN_EXPIRED.message", locale),
             code: "AUTH_TOKEN_EXPIRED",
             expiredAt: jwtError.expiredAt,
           });
@@ -122,8 +125,8 @@ function authenticate(requiredPermission) {
             error: jwtError.message,
           });
           return res.status(401).json({
-            error: "Invalid token",
-            message: "The provided token is not valid",
+            error: t("AUTH_TOKEN_INVALID.error", locale),
+            message: t("AUTH_TOKEN_INVALID.message", locale),
             code: "AUTH_TOKEN_INVALID",
           });
         }
@@ -135,8 +138,8 @@ function authenticate(requiredPermission) {
           name: jwtError.name,
         });
         return res.status(401).json({
-          error: "Authentication failed",
-          message: "Unable to verify token",
+          error: t("AUTH_VERIFICATION_FAILED.error", locale),
+          message: t("AUTH_VERIFICATION_FAILED.message", locale),
           code: "AUTH_VERIFICATION_FAILED",
         });
       }
@@ -158,8 +161,8 @@ function authenticate(requiredPermission) {
           error: dbError.message,
         });
         return res.status(500).json({
-          error: "Internal server error",
-          message: "Unable to verify user account",
+          error: t("AUTH_DB_ERROR.error", locale),
+          message: t("AUTH_DB_ERROR.message", locale),
           code: "AUTH_DB_ERROR",
         });
       }
@@ -169,8 +172,8 @@ function authenticate(requiredPermission) {
           userId: decoded.id,
         });
         return res.status(401).json({
-          error: "User not found",
-          message: "The account associated with this token no longer exists",
+          error: t("AUTH_USER_NOT_FOUND.error", locale),
+          message: t("AUTH_USER_NOT_FOUND.message", locale),
           code: "AUTH_USER_NOT_FOUND",
         });
       }
@@ -182,8 +185,8 @@ function authenticate(requiredPermission) {
           status: user.status,
         });
         return res.status(403).json({
-          error: "Account inactive",
-          message: "Your account has been deactivated. Contact support.",
+          error: t("AUTH_ACCOUNT_INACTIVE.error", locale),
+          message: t("AUTH_ACCOUNT_INACTIVE.message", locale),
           code: "AUTH_ACCOUNT_INACTIVE",
         });
       }
@@ -210,8 +213,8 @@ function authenticate(requiredPermission) {
             requests: entry.count,
           });
           return res.status(429).json({
-            error: "Rate limit exceeded",
-            message: `Maximum ${RATE_LIMIT_MAX_REQUESTS} requests per minute`,
+            error: t("AUTH_RATE_LIMITED.error", locale),
+            message: t("AUTH_RATE_LIMITED.message", locale, { maxRequests: RATE_LIMIT_MAX_REQUESTS }),
             code: "AUTH_RATE_LIMITED",
             retryAfter: Math.ceil(
               (RATE_LIMIT_WINDOW_MS - (now - entry.windowStart)) / 1000
@@ -241,8 +244,8 @@ function authenticate(requiredPermission) {
             has: userPermissions,
           });
           return res.status(403).json({
-            error: "Insufficient permissions",
-            message: `Your role (${user.role}) does not have the '${requiredPermission}' permission`,
+            error: t("AUTH_PERMISSION_DENIED.error", locale),
+            message: t("AUTH_PERMISSION_DENIED.message", locale, { role: user.role, permission: requiredPermission }),
             code: "AUTH_PERMISSION_DENIED",
           });
         }
@@ -267,8 +270,8 @@ function authenticate(requiredPermission) {
         stack: err.stack,
       });
       return res.status(500).json({
-        error: "Internal server error",
-        message: "An unexpected error occurred during authentication",
+        error: t("AUTH_UNEXPECTED_ERROR.error", locale),
+        message: t("AUTH_UNEXPECTED_ERROR.message", locale),
         code: "AUTH_UNEXPECTED_ERROR",
       });
     }
@@ -327,10 +330,16 @@ function getPermissionsForRole(role) {
   return ROLE_PERMISSIONS[role] || [];
 }
 
+function _resetRateLimits() {
+  Object.keys(rateLimitMap).forEach(k => delete rateLimitMap[k]);
+}
+
 module.exports = {
   authenticate,
   optionalAuth,
   hasPermission,
   getPermissionsForRole,
   ROLE_PERMISSIONS,
+  RATE_LIMIT_MAX_REQUESTS,
+  _resetRateLimits,
 };

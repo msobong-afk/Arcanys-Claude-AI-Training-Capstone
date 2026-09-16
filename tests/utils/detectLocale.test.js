@@ -26,4 +26,9 @@ describe('detectLocale()', () => {
     expect(detectLocale({ headers: { 'accept-language': 'FIL-PH' } })).toBe('fil');
     expect(detectLocale({ headers: { 'accept-language': 'TL-PH' } })).toBe('fil');
   });
+
+  it('returns "en" when req has no headers property', () => {
+    expect(detectLocale({})).toBe('en');
+    expect(detectLocale({ headers: undefined })).toBe('en');
+  });
 });

@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require("../models/User");
 const { signToken } = require("../utils/jwt");
 const logger = require("../utils/logger");
+const { t, detectLocale } = require("../utils/i18n");
 
 /**
  * POST /api/auth/register
@@ -10,18 +11,19 @@ const logger = require("../utils/logger");
  */
 router.post("/register", async (req, res, next) => {
   try {
+    const locale = detectLocale(req);
     const { email, password, name } = req.body;
 
     if (!email || !password || !name) {
       return res.status(400).json({
-        error: "Missing required fields: email, password, name",
+        error: t("REGISTER_MISSING_FIELDS.message", locale),
       });
     }
 
     // Check for existing user
     const existing = await User.findByEmail(email);
     if (existing) {
-      return res.status(409).json({ error: "Email already registered" });
+      return res.status(409).json({ error: t("REGISTER_EMAIL_TAKEN.message", locale) });
     }
 
     const user = await User.create({ email, password, name });
@@ -44,26 +46,27 @@ router.post("/register", async (req, res, next) => {
  */
 router.post("/login", async (req, res, next) => {
   try {
+    const locale = detectLocale(req);
     const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({
-        error: "Missing required fields: email, password",
+        error: t("LOGIN_MISSING_FIELDS.message", locale),
       });
     }
 
     const user = await User.findByEmail(email);
     if (!user) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: t("LOGIN_INVALID_CREDENTIALS.message", locale) });
     }
 
     const valid = await User.verifyPassword(password, user.password_hash);
     if (!valid) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: t("LOGIN_INVALID_CREDENTIALS.message", locale) });
     }
 
     if (user.status !== "active") {
-      return res.status(403).json({ error: "Account is inactive" });
+      return res.status(403).json({ error: t("LOGIN_ACCOUNT_INACTIVE.message", locale) });
     }
 
     const token = signToken({

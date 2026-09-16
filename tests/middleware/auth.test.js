@@ -11,7 +11,7 @@ jest.mock("../../src/config/database", () => ({
 
 const jwt = require("jsonwebtoken");
 const db = require("../../src/config/database");
-const { authenticate, hasPermission, getPermissionsForRole } = require("../../src/middleware/auth");
+const { authenticate, hasPermission, getPermissionsForRole, _resetRateLimits, RATE_LIMIT_MAX_REQUESTS } = require("../../src/middleware/auth");
 
 const SECRET = process.env.JWT_SECRET || "fallback-secret-do-not-use";
 
@@ -32,7 +32,10 @@ function mockReqRes(token, extraHeaders = {}) {
 }
 
 describe("auth middleware", () => {
-  afterEach(() => jest.clearAllMocks());
+  afterEach(() => {
+    jest.clearAllMocks();
+    _resetRateLimits();
+  });
 
   describe("authenticate()", () => {
     it("should reject requests with no auth header", async () => {
@@ -100,7 +103,7 @@ describe("auth middleware", () => {
   describe("getPermissionsForRole()", () => {
     it("should return all admin permissions", () => {
       const perms = getPermissionsForRole("admin");
-      expect(perms.length).toBeGreaterThan(10);
+      expect(perms).toHaveLength(14);
       expect(perms).toContain("settings:write");
     });
 
@@ -193,7 +196,7 @@ describe("auth middleware", () => {
 
       const middleware = authenticate();
       let lastRes;
-      for (let i = 0; i < 101; i++) {
+      for (let i = 0; i <= RATE_LIMIT_MAX_REQUESTS; i++) {
         const { req, res, next } = mockReqRes(token, { "accept-language": "fil" });
         await middleware(req, res, next);
         lastRes = res;
@@ -202,8 +205,97 @@ describe("auth middleware", () => {
       expect(lastRes.status).toHaveBeenCalledWith(429);
       expect(lastRes.json).toHaveBeenCalledWith(expect.objectContaining({
         error: "Nalampasan ang rate limit",
-        message: "Maximum na 100 request bawat minuto",
+        message: `Maximum na ${RATE_LIMIT_MAX_REQUESTS} request bawat minuto`,
         code: "AUTH_RATE_LIMITED",
+      }));
+    });
+
+    it("responds in Filipino for AUTH_MALFORMED_HEADER", async () => {
+      const { req, res, next } = mockReqRes(null, { "accept-language": "fil" });
+      // Override to send a non-Bearer format
+      req.headers.authorization = "Token abc";
+      await authenticate()(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: "Kinakailangan ang pagpapatunay",
+        message: "Ang authorization header ay dapat nasa format: Bearer <token>",
+        code: "AUTH_MALFORMED_HEADER",
+      }));
+    });
+
+    it("responds in Filipino for AUTH_TOKEN_INVALID", async () => {
+      const { req, res, next } = mockReqRes("garbage-token", { "accept-language": "fil" });
+      await authenticate()(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: "Hindi wastong token",
+        message: "Ang ibinigay na token ay hindi wasto",
+        code: "AUTH_TOKEN_INVALID",
+      }));
+    });
+
+    it("responds in Filipino for AUTH_USER_NOT_FOUND", async () => {
+      const token = jwt.sign({ id: 99, email: "ghost@test.com", role: "customer" }, SECRET);
+      db.query.mockResolvedValue({ rows: [] });
+
+      const { req, res, next } = mockReqRes(token, { "accept-language": "fil" });
+      await authenticate()(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: "Hindi nahanap ang user",
+        message: "Ang account na nauugnay sa token na ito ay wala na",
+        code: "AUTH_USER_NOT_FOUND",
+      }));
+    });
+
+    it("responds in Filipino for AUTH_DB_ERROR", async () => {
+      const token = jwt.sign({ id: 99, email: "dberr@test.com", role: "customer" }, SECRET);
+      db.query.mockRejectedValue(new Error("connection refused"));
+
+      const { req, res, next } = mockReqRes(token, { "accept-language": "fil" });
+      await authenticate()(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: "Panloob na error ng server",
+        message: "Hindi ma-verify ang user account",
+        code: "AUTH_DB_ERROR",
+      }));
+    });
+
+    it("responds in Filipino for AUTH_VERIFICATION_FAILED", async () => {
+      const token = jwt.sign({ id: 99, email: "v@test.com", role: "customer" }, SECRET, { notBefore: "1h" });
+
+      const { req, res, next } = mockReqRes(token, { "accept-language": "fil" });
+      await authenticate()(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: "Nabigo ang pagpapatunay",
+        message: "Hindi ma-verify ang token",
+        code: "AUTH_VERIFICATION_FAILED",
+      }));
+    });
+
+    it("responds in Filipino for AUTH_UNEXPECTED_ERROR", async () => {
+      const token = jwt.sign({ id: 8, email: "boom@test.com", role: "customer" }, SECRET);
+      db.query.mockResolvedValue({
+        rows: [{ id: 8, email: "boom@test.com", name: "Boom", role: "customer",
+                 customer_tier: "bronze", status: "active" }],
+      });
+      const { req, res } = mockReqRes(token, { "accept-language": "fil" });
+      const throwingNext = jest.fn().mockImplementation(() => { throw new Error("unexpected"); });
+
+      await authenticate()(req, res, throwingNext);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        error: "Panloob na error ng server",
+        message: "May hindi inaasahang error na nangyari habang nagpapatunay",
+        code: "AUTH_UNEXPECTED_ERROR",
       }));
     });
   });

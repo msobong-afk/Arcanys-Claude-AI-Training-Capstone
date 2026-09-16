@@ -35,4 +35,13 @@ describe('t()', () => {
     expect(t('NONEXISTENT_KEY.error', 'en')).toBe('NONEXISTENT_KEY.error');
     expect(t('NONEXISTENT_KEY.error', 'fil')).toBe('NONEXISTENT_KEY.error');
   });
+
+  it('returns the key itself when a field does not exist on a known code', () => {
+    expect(t('REGISTER_MISSING_FIELDS.error', 'en')).toBe('REGISTER_MISSING_FIELDS.error');
+    expect(t('AUTH_MISSING_HEADER.nonexistentField', 'en')).toBe('AUTH_MISSING_HEADER.nonexistentField');
+  });
+
+  it('leaves unresolved placeholders intact when vars key is absent', () => {
+    expect(t('AUTH_RATE_LIMITED.message', 'en', {})).toBe('Maximum {{maxRequests}} requests per minute');
+  });
 });
